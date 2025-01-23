@@ -50,18 +50,24 @@ public class Player : DestroyableSprite
                 Speed = 10.0F,
                 OnUse = (weapon) =>
                 {
+                    var mouseTarget = gameManager.GetMousePosition();
                     gameManager.CreateEntity<Projectile>(CreatureSpawnMarker.Projectile, manager =>
                     {
+                        var direction = GetDirectionTo(mouseTarget);
                        var texture = new Texture2D(manager.Game.GraphicsDevice, 5, 5);
                        var data = Enumerable.Repeat(Color.Black, 25).ToArray();
                        texture.SetData(data);
 
-                       var projectile = new Projectile(texture)
+                       var projectile = new Projectile(texture, direction, Position)
                        {
-                           Owner = manager.GetPlayer()!,
-                           Damage = manager.GetPlayer()?.GetWeapon()?.Attack ?? 1F
+                           Owner = this,
+                           Damage = GetWeapon()?.Attack ?? 1F,
+                           Target = mouseTarget
                        };
-                       
+                       projectile.OnDispose = () =>
+                       {
+                           weapon.Shots.Remove(projectile);
+                       };
                        weapon.Shots.Add(projectile);
                        return projectile;
                     });
@@ -91,7 +97,6 @@ public class Player : DestroyableSprite
         if (weapon is not null)
         {
             weapon.Use();
-            destroyableSprite.TakeDamage(weapon);
             return;
         };
         
@@ -168,7 +173,7 @@ public class Player : DestroyableSprite
     protected override void OnDeath()
     {
         _logger.LogDebug("Player died, game over!");
-        Environment.Exit(0);
+        Health = 100;
     }
 
     protected override void OnDamageTaken(int damage)

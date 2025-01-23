@@ -8,4 +8,9 @@ public static class GameComponentExtensions
     {
         return rect.Left < other.Right && rect.Right > other.Left && rect.Top < other.Bottom && rect.Bottom > other.Top;
     }
+    
+    public static bool IsOffScreen(this Rectangle rect, Rectangle bounds)
+    {
+        return rect.Left < bounds.Left || rect.Right > bounds.Right || rect.Top < bounds.Top || rect.Bottom > bounds.Bottom;
+    }
 }

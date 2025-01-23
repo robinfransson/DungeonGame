@@ -20,4 +20,5 @@ public interface IGameManager
     void RemoveEntity(Entity entity);
     T CreateEntity<T>(object key) where T : Entity;
     T CreateEntity<T>(object key, Func<IGameManager, T> acquire) where T : Entity;
+    Point GetMousePosition();
 }

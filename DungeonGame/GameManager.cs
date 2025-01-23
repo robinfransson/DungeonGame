@@ -77,6 +77,16 @@ public class GameManager : IGameManager
             
             Sprites = {_player, _npc}
         };
+
+        var offScreenEntities = _currentScene.Sprites
+            .Where(entity => entity is IOffScreenEvent offScreenEvent &&
+                             offScreenEvent.Bounds.IsOffScreen(_game.GraphicsDevice.Viewport.Bounds))
+            .Cast<IOffScreenEvent>();
+        foreach (var entity in offScreenEntities)
+        {
+            entity.OnOffScreen();
+        }
+        
         _currentScene.Draw(spriteBatch);
     }
 
@@ -223,7 +233,13 @@ public class GameManager : IGameManager
         }
         return CreateEntity<T>(key);
     }
-    
+
+    public Point GetMousePosition()
+    {
+        var state = Mouse.GetState();
+        return new Point(state.X, state.Y);
+    }
+
     public T CreateEntity<T>(object key) where T : Entity
     {
         if (!_entityProvider.TryGetValue(key, out var provider))
