@@ -9,9 +9,9 @@ public interface IGameManager
     event EventHandler<KeyboardEventArgs> KeyPressed;
     event EventHandler<LogMessageEventArgs> LogMessage;
     event EventHandler<MouseEventArgs> MouseClicked;
-    
-    Game Game { get; }
-    
+    event EventHandler<ViewportChangedEventArgs> ViewportChanged;
+    GameWindow Game { get; }
+
     void Update(GameTime gameTime);
     Task RunAsync();
     T GetService<T>() where T : notnull;

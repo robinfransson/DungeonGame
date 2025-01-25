@@ -21,7 +21,6 @@ public class GameManager : IGameManager
     private TimeSpan _previousUpdateTime = TimeSpan.Zero;
     private Keys[] _previousKeys = [];
     private readonly ILogger<GameManager> _logger;
-    private readonly GameWindow _game;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IServiceProvider _serviceProvider;
     private Player? _player;
@@ -29,6 +28,12 @@ public class GameManager : IGameManager
     public event EventHandler<KeyboardEventArgs>? KeyPressed;
     public event EventHandler<LogMessageEventArgs>? LogMessage;
     public event EventHandler<MouseEventArgs>? MouseClicked;
+    public event EventHandler<ViewportChangedEventArgs>? ViewportChanged
+    {
+        add => Game.ViewportChanged += value;
+        remove => Game.ViewportChanged -= value;
+    }
+
     private Scene? _currentScene;
     private MouseState _previousMouseState;
     private ConcurrentDictionary<object, object> _entityProvider = new();
@@ -41,11 +46,11 @@ public class GameManager : IGameManager
         IServiceProvider serviceProvider)
     {
         _logger = logger;
-        _game = game;
+        Game = game;
         _loggerFactory = loggerFactory;
         _serviceProvider = serviceProvider;
-        _contentManager = _game.Content;
-        game.OnUpdate += (_, e) => Update(e.GameTime);
+        _contentManager = Game.Content;
+        // game.OnUpdate += (_, e) => Update(e.GameTime);
         game.OnDraw += (_, e) => Draw(e.GameTime);
         
         var mods = serviceProvider.GetServices(typeof(IModInitializer));
@@ -61,10 +66,11 @@ public class GameManager : IGameManager
 
     private void Draw(GameTime gameTime)
     {
-        if(_game.GraphicsDevice is null)
+        if(Game.GraphicsDevice is null)
             return;
         
-        var spriteBatch = new SpriteBatch(_game.GraphicsDevice);
+        Update(gameTime);
+        var spriteBatch = new SpriteBatch(Game.GraphicsDevice);
         spriteBatch.Begin();
         DoDraw(spriteBatch);
         spriteBatch.End();
@@ -75,7 +81,7 @@ public class GameManager : IGameManager
         _player ??= CreatePlayer();
         _npc ??= new NonPlayerCharacter(_contentManager.Load<Texture2D>("character_down"));
         _npc.RegisterEvents(this);
-        _currentScene ??= new Scene(_game)
+        _currentScene ??= new Scene(Game)
         {
             
             Sprites = {_player, _npc},
@@ -84,7 +90,7 @@ public class GameManager : IGameManager
 
         var offScreenEntities = _currentScene.Sprites
             .Where(entity => entity is IOffScreenEvent offScreenEvent &&
-                             offScreenEvent.Bounds.IsOffScreen(_game.GraphicsDevice.Viewport.Bounds))
+                             offScreenEvent.Bounds.IsOffScreen(Game.GraphicsDevice.Viewport.Bounds))
             .Cast<IOffScreenEvent>();
         foreach (var entity in offScreenEntities)
         {
@@ -110,7 +116,7 @@ public class GameManager : IGameManager
     {
         var texture = _contentManager.Load<Texture2D>("character_down");
         var newBounds = new Rectangle(0, 0, texture.Width / 2, texture.Height / 2);
-        var pixel = new Texture2D(_game.GraphicsDevice, newBounds.Width, newBounds.Height);
+        var pixel = new Texture2D(Game.GraphicsDevice, newBounds.Width, newBounds.Height);
         var data = new Color[newBounds.Width * newBounds.Height];
         texture.GetData(0, newBounds, data, 0, data.Length);
         pixel.SetData(data);
@@ -119,7 +125,7 @@ public class GameManager : IGameManager
 
     public void OnKeyboardChange(KeyboardEventArgs e) => KeyPressed?.Invoke(this, e);
 
-    public Game Game => _game;
+    public GameWindow Game { get; }
 
     public void Update(GameTime gameTime)
     {
@@ -187,7 +193,7 @@ public class GameManager : IGameManager
 
     public async Task RunAsync()
     {
-        while (!_game.IsReady())
+        while (!Game.IsReady())
         {
             _logger.LogDebug("Waiting for graphics device to be initialized");
             await Task.Delay(TimeSpan.FromSeconds(3));
@@ -195,9 +201,10 @@ public class GameManager : IGameManager
             
         _logger.LogDebug("Graphics device initialized");
         
-        _currentScene ??= new Scene(_game);
-        _game.InitializeGame();
-        _game.Run();
+        _currentScene ??= new Scene(Game);
+        _currentScene.RegisterEvents(this);
+        Game.InitializeGame();
+        Game.Run();
     }
 
     public T GetService<T>() where T : notnull

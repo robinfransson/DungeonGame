@@ -1,13 +1,14 @@
 ﻿using DungeonGame.Entities;
+using DungeonGame.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame;
 
-public class Scene : GameComponent
+public class Scene : GameComponent, IEventListener
 {
     private readonly Queue<Entity> _entityRemoveQueue = [];
-    public Texture2D Background { get; }
+    public Texture2D Background { get; protected set; }
     public List<Entity> Sprites { get; } = [];
 
     public List<GameObject> GameObjects { get; set; } = [];
@@ -88,6 +89,22 @@ public class Scene : GameComponent
         {
             return false;
         }
+    }
+
+    public bool HasRegistered { get; }
+    public void RegisterEvents(IGameManager gameManager)
+    {
+        if (HasRegistered)
+        {
+            return;
+        }
+        
+        gameManager.Game.ViewportChanged += OnViewportChange;
+    }
+
+    private void OnViewportChange(object? sender, ViewportChangedEventArgs e)
+    {
+        Background = CreateGrassyBackground();
     }
 }
 

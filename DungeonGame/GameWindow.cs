@@ -14,13 +14,15 @@ namespace DungeonGame
 {
     public class GameWindow : Game
     {
+        private readonly GraphicsDeviceManagerFactory _factory;
         internal event EventHandler<GameUpdateEventArgs>? OnUpdate; 
         internal event EventHandler<GameDrawEventArgs>? OnDraw;
+        internal event EventHandler<ViewportChangedEventArgs>? ViewportChanged;
         private bool IsInitialized => this.GraphicsDevice != null;
 
         public GameWindow(GraphicsDeviceManagerFactory factory) :base()
         {
-            factory(this);
+            _factory = factory;
             Content.RootDirectory = "Content";
             this.IsMouseVisible = true;
             
@@ -56,6 +58,7 @@ namespace DungeonGame
         {
             try
             {
+                _factory(this);
                 this.RunOneFrame();
                 return this.GraphicsDevice != null;
             }
@@ -70,6 +73,39 @@ namespace DungeonGame
             //get the max resolution of the monitor
             var (width, height) = (GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width, GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height);
             this.GraphicsDevice.Viewport = new Viewport(0, 0, width, height);
+            this.GraphicsDevice.PresentationParameters.BackBufferWidth = width;
+            this.GraphicsDevice.PresentationParameters.BackBufferHeight = height;
+            this.GraphicsDevice.PresentationParameters.IsFullScreen = true;
+            this.GraphicsDevice.PresentationParameters.DeviceWindowHandle = this.Window.Handle;
+            GraphicsDevice.Reset();
+            ViewportChanged?.Invoke(this, new ViewportChangedEventArgs(new ViewportChangedEventArgs.ViewportContainer(GraphicsDevice.Viewport)));
+            
+            this.IsMouseVisible = true;
+        }
+
+        protected virtual void OnViewportChanged(ViewportChangedEventArgs e)
+        {
+            ViewportChanged?.Invoke(this, e);
+        }
+    }
+
+    public struct ViewportChangedEventArgs
+    {
+        public ViewportChangedEventArgs(ViewportContainer viewport)
+        {
+            Viewport = viewport;
+        }
+
+        public ViewportContainer Viewport;
+        
+        public struct ViewportContainer
+        {
+            public ViewportContainer(Viewport viewport)
+            {
+                
+            }
+         
+            public Viewport Viewport { get; }   
         }
     }
 }

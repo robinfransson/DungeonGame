@@ -5,9 +5,11 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame.Entities;
 
-public class NonPlayerCharacter : DestroyableSprite, IEventListener
+public class NonPlayerCharacter : DestroyableSprite, IEventListener,IOffScreenEvent
 {
     private readonly Timer _timer;
+    private Func<IGameManager>? _gameManagerGetter = null!;
+    private Viewport? _viewport => _gameManagerGetter?.Invoke().Game.GraphicsDevice.Viewport;
     public NonPlayerCharacter(Texture2D texture) : base(texture)
     {
         DrawOrder = 1;
@@ -30,6 +32,7 @@ public class NonPlayerCharacter : DestroyableSprite, IEventListener
 
     public void RegisterEvents(IGameManager gameManager)
     {
+        _gameManagerGetter = () => gameManager;
         gameManager.LogMessage += LogMessage;
         OnDispose = () =>
         {
@@ -55,7 +58,26 @@ public class NonPlayerCharacter : DestroyableSprite, IEventListener
     {
         var directions = Enum.GetValues<Direction>();
         var direction = directions.ElementAt(Random.Shared.Next(0, directions.Length));
+        
+        if(!_viewport.HasValue)
+            return;
+        
+        var viewport = _viewport.Value;
+        
         var position = Position;
+        
+        var canMoveToDirection = direction switch
+        {
+            Direction.Up => position.Y - Speed > 0,
+            Direction.Down => position.Y + Speed < viewport.Height - Texture.Height,
+            Direction.Left => position.X - Speed > 0,
+            Direction.Right => position.X + Speed < viewport.Width - Texture.Width,
+            _ => false
+        };
+        
+        if (!canMoveToDirection)
+            return;
+        
         switch (direction)
         {
             case Direction.Up:
@@ -89,5 +111,40 @@ public class NonPlayerCharacter : DestroyableSprite, IEventListener
     protected override void OnHealthRestored(int health)
     {
         throw new NotImplementedException();
+    }
+
+    public Rectangle Bounds => new Rectangle(Position.ToPoint(), Texture.Bounds.Size);
+    public void OnOffScreen()
+    {
+        this.KeepOnScreen();
+    }
+
+    private void KeepOnScreen()
+    {
+        if (_gameManagerGetter is not { } factory || factory() is not { } gameManager)
+            return;
+        var viewport = gameManager.Game.GraphicsDevice.Viewport;
+        var position = Position;
+        if (position.X < 0)
+        {
+            position.X = 0;
+        }
+
+        if (position.Y < 0)
+        {
+            position.Y = 0;
+        }
+
+        if (position.X + Texture.Width > viewport.Width)
+        {
+            position.X = viewport.Width - Texture.Width;
+        }
+
+        if (position.Y + Texture.Height > viewport.Height)
+        {
+            position.Y = viewport.Height - Texture.Height;
+        }
+
+        Position = position;
     }
 }
