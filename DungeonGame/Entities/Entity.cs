@@ -4,10 +4,10 @@ namespace DungeonGame.Entities;
 
 public abstract class Entity
 {
-    protected Point PreviousPosition = Point.Zero;
+    protected Point PreviousPosition { get; set; } = Point.Zero;
     protected Vector2 Position { get; set; }
     protected Color Color { get; set; } 
-    protected float Speed {get; set;} = 10.0f;
+    protected float Speed { get; set;} = 10.0f;
     protected Direction Direction { get; set; } = Direction.Down;
     protected Rectangle Rectangle { get; set; }
     public string Name { get; protected set; } = string.Empty;
@@ -24,6 +24,24 @@ public abstract class Entity
     {
         return new Rectangle(Position.ToPoint(), Rectangle.Size);
     }
+    
+    
+
+    public void Push(Direction direction)
+    {
+        PreviousPosition = Position.ToPoint();
+        Direction = direction;
+        Position += direction switch
+        {
+            Direction.Up => new Vector2(0, -Speed),
+            Direction.Down => new Vector2(0, Speed),
+            Direction.Left => new Vector2(-Speed, 0),
+            Direction.Right => new Vector2(Speed, 0),
+            _ => Vector2.Zero
+        };
+    }
+    
+    public float GetSpeed() => Speed;
     
     public Direction GetDirectionTo(Entity other) => other.PreviousPosition switch
     {

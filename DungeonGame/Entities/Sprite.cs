@@ -4,17 +4,21 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame.Entities;
 
-public abstract class Sprite : Entity, IEventListener, IDisposable
+public abstract class Sprite : Entity, IDisposable
 {
-    protected virtual Texture2D Texture { get; }
+    private readonly Texture2D _emptyTexture;
+    
+    private Texture2D? _texture2D;
+    protected virtual Texture2D Texture => _texture2D ?? _emptyTexture;
     public bool HasRegistered { get; protected set; }
-    public bool HasCollisions { get; protected set; }
     public int DrawOrder { get; set; }
 
 
     protected Sprite(Texture2D texture) : base(texture.Bounds.Location.ToVector2(), texture.Bounds, Color.White)
     {
-        Texture = texture;
+        _emptyTexture = new Texture2D(texture.GraphicsDevice, 1, 1);
+        _emptyTexture.SetData([Color.Transparent]);
+        _texture2D = texture;
         DrawOrder = 0;
     }
     
@@ -22,23 +26,12 @@ public abstract class Sprite : Entity, IEventListener, IDisposable
     {
         spriteBatch.Draw(Texture, Position, Color);
     }
-    
-    public void OnCollision(Sprite other, Direction direction)
-    {
-        if(HasCollisions)
-        {
-            OnCollided(other, direction);
-        }
-    }
-    
-    protected abstract void OnCollided(Sprite other, Direction direction);
-    public abstract void RegisterEvents(IGameManager gameManager);
 
     protected virtual void OnDisposeSignal() {}
     
     public void Dispose()
     {
-        Texture.Dispose();
+        _texture2D = null;
         OnDisposeSignal();
         GC.SuppressFinalize(this);
     }

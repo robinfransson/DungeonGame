@@ -61,7 +61,10 @@ public class GameManager : IGameManager
 
     private void Draw(GameTime gameTime)
     {
-        using var spriteBatch = new SpriteBatch(_game.GraphicsDevice);
+        if(_game.GraphicsDevice is null)
+            return;
+        
+        var spriteBatch = new SpriteBatch(_game.GraphicsDevice);
         spriteBatch.Begin();
         DoDraw(spriteBatch);
         spriteBatch.End();
@@ -75,7 +78,8 @@ public class GameManager : IGameManager
         _currentScene ??= new Scene(_game)
         {
             
-            Sprites = {_player, _npc}
+            Sprites = {_player, _npc},
+            GameObjects = []
         };
 
         var offScreenEntities = _currentScene.Sprites
@@ -159,7 +163,7 @@ public class GameManager : IGameManager
 
     private void CheckCollision()
     {
-        var entities = _currentScene?.Sprites.OfType<Sprite>().ToList();
+        var entities = _currentScene?.Sprites.OfType<CollidableSprite>().ToList();
         if(entities is null)
         {
             return;
@@ -168,7 +172,7 @@ public class GameManager : IGameManager
         foreach (var entity in entities)
         {
             var withoutCurrentAndPlayer = entities.Where(x => x != entity && x != _player);
-            foreach (var other in withoutCurrentAndPlayer)
+            foreach (var other in withoutCurrentAndPlayer.Where(entity.ShouldCollideWith))
             {
                 if(entity.GetPosition().Intersects(other.GetPosition()))
                 {
@@ -192,6 +196,7 @@ public class GameManager : IGameManager
         _logger.LogDebug("Graphics device initialized");
         
         _currentScene ??= new Scene(_game);
+        _game.InitializeGame();
         _game.Run();
     }
 
@@ -213,7 +218,7 @@ public class GameManager : IGameManager
 
     public void RemoveEntity(Entity entity)
     {
-        var success = (_currentScene?.Sprites.Remove(entity)).GetValueOrDefault();
+        var success = (_currentScene?.RemoveEntity(entity)).GetValueOrDefault();
         
         _logger.LogDebug("Entity {Entity} was removed: {Success}", entity, success);
     }

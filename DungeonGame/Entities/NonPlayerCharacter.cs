@@ -5,7 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame.Entities;
 
-public class NonPlayerCharacter : DestroyableSprite
+public class NonPlayerCharacter : DestroyableSprite, IEventListener
 {
     private readonly Timer _timer;
     public NonPlayerCharacter(Texture2D texture) : base(texture)
@@ -15,11 +15,20 @@ public class NonPlayerCharacter : DestroyableSprite
         Name = "Enemy";
     }
 
-    protected override void OnCollided(Sprite other, Direction direction)
+    public override bool ShouldCollideWith(Sprite other)
     {
+        return other is CollidableSprite;
     }
 
-    public override void RegisterEvents(IGameManager gameManager)
+    protected override void OnCollided(Sprite other, Direction direction)
+    {
+        if(other is Projectile)
+            return;
+        //do a switch expression on direction
+        other.Push(direction);
+    }
+
+    public void RegisterEvents(IGameManager gameManager)
     {
         gameManager.LogMessage += LogMessage;
         OnDispose = () =>

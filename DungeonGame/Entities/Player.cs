@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Input;
 
 namespace DungeonGame.Entities;
 
-public class Player : DestroyableSprite
+public class Player : DestroyableSprite, IEventListener
 {
     private readonly ILogger<Player> _logger;
     private Dictionary<Direction, Dictionary<MovementState, Func<Texture2D>>> _textures = new();
@@ -23,17 +23,21 @@ public class Player : DestroyableSprite
         Position = Vector2.Zero;
         Direction = Direction.Down;
         Color = Color.White;
-        HasCollisions = true;
     }
 
     protected override Texture2D Texture => _textures[Direction][_movementState]();
 
-    protected override void OnCollided(Sprite other, Direction direction)
+    public override bool ShouldCollideWith(Sprite other)
     {
-        _logger.LogDebug("Collided with {other} from {direction}", other, direction.Inverse());
+        return other is not Player;
     }
 
-    public override void RegisterEvents(IGameManager gameManager)
+    protected override void OnCollided(Sprite other, Direction direction)
+    {
+        other.Push(direction);
+    }
+
+    public void RegisterEvents(IGameManager gameManager)
     {
         if(HasRegistered)
         {
@@ -66,7 +70,7 @@ public class Player : DestroyableSprite
                        };
                        projectile.OnDispose = () =>
                        {
-                           weapon.Shots.Remove(projectile);
+                           gameManager.RemoveEntity(projectile);
                        };
                        weapon.Shots.Add(projectile);
                        return projectile;

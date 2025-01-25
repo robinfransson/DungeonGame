@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame.Entities;
 
-public abstract class DestroyableSprite : Sprite, IDisposable
+public abstract class DestroyableSprite : CollidableSprite
 {
     private const int Width = 100;
     private Texture2D? _texture;
@@ -15,7 +15,7 @@ public abstract class DestroyableSprite : Sprite, IDisposable
     public int MaxHealth { get; protected set; }
     
     
-    protected virtual Texture2D HealthBarTexture
+    protected virtual Texture2D? HealthBarTexture
     {
         get
         {
@@ -77,6 +77,11 @@ public abstract class DestroyableSprite : Sprite, IDisposable
     {
         
         base.Draw(spriteBatch);
+        if(HealthBarTexture is null)
+        {
+            return;
+        }
+        
         var healthBarPositionWithOffset = Position - new Vector2(-(HealthBarTexture.Width / 4), 30);
         spriteBatch.Draw(HealthBarTexture, healthBarPositionWithOffset, Color.White);
     }
@@ -85,7 +90,7 @@ public abstract class DestroyableSprite : Sprite, IDisposable
     protected abstract void OnDamageTaken(int damage);
     protected abstract void OnHealthRestored(int health);
 
-    public void Dispose()
+    protected override void OnDisposeSignal()
     {
         _texture?.Dispose();
         OnDispose?.Invoke();

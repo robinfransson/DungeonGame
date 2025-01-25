@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using DungeonGame.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame
 {
@@ -19,9 +20,16 @@ namespace DungeonGame
 
         public GameWindow(GraphicsDeviceManagerFactory factory) :base()
         {
+            factory(this);
             Content.RootDirectory = "Content";
             this.IsMouseVisible = true;
-            factory(this);
+            
+            //set fullscreen windowed
+            this.Window.IsBorderless = true;
+            this.Window.Position = Point.Zero;
+            this.Window.AllowUserResizing = true;
+            this.Window.IsBorderless = true;
+            this.Window.AllowAltF4 = true;
         }
 
         protected override void Draw(GameTime gameTime)
@@ -55,6 +63,13 @@ namespace DungeonGame
             {
                 return false;
             }
+        }
+
+        public void InitializeGame()
+        {
+            //get the max resolution of the monitor
+            var (width, height) = (GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width, GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height);
+            this.GraphicsDevice.Viewport = new Viewport(0, 0, width, height);
         }
     }
 }

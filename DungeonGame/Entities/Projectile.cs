@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame.Entities;
 
-public class Projectile : Sprite, IOffScreenEvent
+public class Projectile : CollidableSprite, IOffScreenEvent
 {
     public Point Target { get; set; } = Point.Zero;
     public Entity? Owner { get; set; }
@@ -18,6 +18,13 @@ public class Projectile : Sprite, IOffScreenEvent
         HasCollisions = true;
     }
 
+    public bool HasCollisions { get; set; }
+
+    public override bool ShouldCollideWith(Sprite other)
+    {
+        return other != Owner;
+    }
+
     protected override void OnCollided(Sprite other, Direction direction)
     {
         if(other is DestroyableSprite destroyableSprite)
@@ -26,11 +33,6 @@ public class Projectile : Sprite, IOffScreenEvent
         }
         
         Dispose();
-    }
-    
-    public override void RegisterEvents(IGameManager gameManager)
-    {
-        
     }
 
     public override void Draw(SpriteBatch spriteBatch)
