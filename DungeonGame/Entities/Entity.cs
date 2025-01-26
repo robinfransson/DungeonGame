@@ -25,7 +25,10 @@ public abstract class Entity : IGameComponent
         return new Rectangle(Position.ToPoint(), Rectangle.Size);
     }
     
-    
+    public void SetPosition(Vector2 position)
+    {
+        Position = position;
+    }
 
     public void Push(Direction direction)
     {

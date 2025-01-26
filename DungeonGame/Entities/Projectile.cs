@@ -16,10 +16,11 @@ public class Projectile : CollidableSprite, IOffScreenEvent, IEventListener
     public float Damage { get; set; } = 1.0f;
     public Projectile(Texture2D texture, Direction direction, Vector2 origin) : base(texture)
     {
-        DrawOrder = int.MaxValue;
+        DrawOrder = -1;
         Direction = direction;
         Position = origin;
         HasCollisions = true;
+        Scale = 10f;
     }
 
     public bool HasCollisions { get; set; }

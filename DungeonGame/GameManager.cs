@@ -98,7 +98,6 @@ public class GameManager : IGameManager
         {
             
             Sprites = {_player, _npc},
-            GameObjects = []
         };
 
         var offScreenEntities = _currentScene.Sprites

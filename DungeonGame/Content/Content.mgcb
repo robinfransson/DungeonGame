@@ -10,6 +10,7 @@
 
 #-------------------------------- References --------------------------------#
 
+/reference:..\pipeline-references\MonoGame.Extended.Content.Pipeline.dll
 
 #---------------------------------- Content ---------------------------------#
 
@@ -156,4 +157,21 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:character_up.png
+
+#begin Tileset/punyworld-overworld-tiles.tsx
+/importer:TiledMapTilesetImporter
+/processor:TiledMapTilesetProcessor
+/build:Tileset/punyworld-overworld-tiles.tsx
+
+#begin Tileset/punyworld-overworld-tileset.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Tileset/punyworld-overworld-tileset.png
 

@@ -14,6 +14,8 @@
       <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.1" />
       <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
       <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.2.1105" />
+      <PackageReference Include="MonoGame.Extended" Version="4.0.4" />
+      <PackageReference Include="MonoGame.Extended.Content.Pipeline" Version="4.0.4" />
       <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.2.1105" />
     </ItemGroup>
 
@@ -22,4 +24,8 @@
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </MonoGameContentReference>
     </ItemGroup>
+
+    <PropertyGroup>
+        <MonoGameExtendedPipelineReferencePath>$(MSBuildThisFileDirectory)pipeline-references</MonoGameExtendedPipelineReferencePath>
+    </PropertyGroup>
 </Project>

@@ -23,6 +23,7 @@ public class Player : DestroyableSprite, IEventListener
         Position = Vector2.Zero;
         Direction = Direction.Down;
         Color = Color.White;
+        Scale = 0.4f;
     }
 
     protected override Texture2D Texture => _textures[Direction][_movementState]();
@@ -68,6 +69,8 @@ public class Player : DestroyableSprite, IEventListener
                            Damage = GetWeapon()?.Attack ?? 1F,
                            Target = mouseTarget
                        };
+                       projectile.SetScale(5);
+                       projectile.DrawOrder = 20;
                        projectile.OnDispose = () =>
                        {
                            gameManager.RemoveEntity(projectile);

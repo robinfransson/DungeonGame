@@ -1,15 +1,19 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Channels;
 using DungeonGame.Entities;
 using DungeonGame.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.Tiled;
 
 namespace DungeonGame;
 
 public class Scene : GameComponent, IEventListener
 {
     private readonly Channel<Entity> _entityRemoveQueue;
+    private readonly GameObjectWrapper Inspector = null!;
     public Texture2D Background { get; protected set; }
     public List<Entity> Sprites { get; } = [];
 
@@ -19,6 +23,41 @@ public class Scene : GameComponent, IEventListener
     {
         _entityRemoveQueue = entityRemoveQueue;
         Background = CreateGrassyBackground();
+        Inspector = SpawnInspector();
+    }
+
+    private GameObjectWrapper SpawnInspector()
+    {
+        var tileSet = Game.Content.Load<TiledMapTileset>("Tileset/punyworld-overworld-tiles");
+        var walls = new List<GameObject>();
+
+        foreach (var tile in tileSet.Tiles.OfType<TiledMapTilesetAnimatedTile>())
+        {
+            var tileId = tile.LocalTileIdentifier;
+            
+            var animationCoordinates = tile.AnimationFrames.SelectMany(x => x.GetTextureCoordinates(TiledMapTileFlipFlags.None));
+            var rectangle = tileSet.GetTileRegion(tileId);
+            var tileTexture = tileSet.Texture;
+            var textures = animationCoordinates.Select(x =>
+            {
+                var texture = new Texture2D(Game.GraphicsDevice, rectangle.Width, rectangle.Height);
+                var colors = new Color[rectangle.Width * rectangle.Height];
+                tileTexture.GetData(0, rectangle, colors, 0, colors.Length);
+                texture.SetData(colors);
+                return texture;
+            }).ToList();
+            
+            
+            
+            var wall = new GameObject(Game, rectangle)
+            {
+                HasCollision = true,
+                Animations = textures
+            };
+            walls.Add(wall);
+        }
+        GameObjectWrapper.GameObjects = walls;
+        return new GameObjectWrapper(Game, new Rectangle(0, 0, 0, 0));
     }
 
     public void Draw(SpriteBatch spriteBatch)
@@ -35,6 +74,12 @@ public class Scene : GameComponent, IEventListener
         {
             sprite.Draw(spriteBatch);
         }
+        
+        foreach (var gameObject in GameObjects)
+        {
+            gameObject.Draw(spriteBatch);
+        }
+        Inspector.Draw(spriteBatch);
     }
     
     private IEnumerable<Entity> GetEntitiesAsync()
@@ -122,6 +167,7 @@ public class Scene : GameComponent, IEventListener
         }
         
         gameManager.Game.ViewportChanged += OnViewportChange;
+        Inspector.RegisterEvents(gameManager);
     }
 
     private void OnViewportChange(object? sender, ViewportChangedEventArgs e)
