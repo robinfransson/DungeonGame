@@ -106,7 +106,8 @@ namespace DungeonGame
         public void InitializeComponent<T>(EntityWrapper<T> entity) where T : Entity
         {
             Components.Add(entity);
-            entity.Initialize(); ;
+            Components.ComponentRemoved += (sender,args) => entity.Dispose();
+            entity.Initialize();
         }
     }
 
@@ -127,14 +128,22 @@ namespace DungeonGame
 
         public override void Update(GameTime gameTime)
         {
-            
-            
             Entity.Update(_gameManager);
             base.Update(gameTime);
         }
         
         public override T GetEntity() => Entity;
-        
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+
+            if (Entity is IDisposable disposable)
+            {
+                disposable.Dispose();   
+            }
+        }
+
         public static implicit operator T(EntityWrapper<T> wrapper) => wrapper.Entity;
     }
 }

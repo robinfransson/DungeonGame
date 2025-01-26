@@ -63,4 +63,12 @@ public abstract class Entity : IGameComponent
 
     public virtual void Update(IGameManager gameManager){}
     public virtual void Initialize(){}
+
+    public void OnComponentRemoved(object? sender, GameComponentCollectionEventArgs e)
+    {
+        if (e.GameComponent is IDisposable entity && Equals(entity, this))
+        {
+            entity.Dispose();
+        }
+    }
 }

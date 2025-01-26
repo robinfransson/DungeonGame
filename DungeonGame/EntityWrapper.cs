@@ -5,10 +5,11 @@ namespace DungeonGame;
 
 public abstract class EntityWrapper : GameComponent
 {
-    protected abstract Entity Entity { get; }
-        
+    protected virtual Entity Entity { get; }
+
     protected EntityWrapper(Game game, Entity entity) : base(game)
     {
+        Entity = entity;
     }
         
     public abstract Entity GetEntity();

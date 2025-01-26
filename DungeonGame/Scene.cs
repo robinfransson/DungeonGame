@@ -1,4 +1,6 @@
-﻿using DungeonGame.Entities;
+﻿using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+using DungeonGame.Entities;
 using DungeonGame.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -7,29 +9,49 @@ namespace DungeonGame;
 
 public class Scene : GameComponent, IEventListener
 {
-    private readonly Queue<Entity> _entityRemoveQueue = [];
+    private readonly Channel<Entity> _entityRemoveQueue;
     public Texture2D Background { get; protected set; }
     public List<Entity> Sprites { get; } = [];
 
     public List<GameObject> GameObjects { get; set; } = [];
 
-    public Scene(Game game) : base(game)
+    public Scene(Game game, Channel<Entity> entityRemoveQueue) : base(game)
     {
+        _entityRemoveQueue = entityRemoveQueue;
         Background = CreateGrassyBackground();
     }
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        for (var i = 0; i < _entityRemoveQueue.Count; i++)
+        var toRemove = GetEntitiesAsync();
+        
+        foreach (var entity in toRemove)
         {
-            var entity = _entityRemoveQueue.Dequeue();
             Sprites.Remove(entity);
+            Game.Components.Remove(entity);
         }
-
         spriteBatch.Draw(Background, Vector2.Zero, Color.White);
         foreach (var sprite in Sprites.OfType<Sprite>().OrderBy(x => x.DrawOrder))
         {
             sprite.Draw(spriteBatch);
+        }
+    }
+    
+    private IEnumerable<Entity> GetEntitiesAsync()
+    {
+        
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(1000);
+        try
+        {
+            while (_entityRemoveQueue.Reader.TryRead(out var entity))
+            {
+                yield return entity;
+            }
+        }
+        finally
+        {
+            cts.Dispose();
         }
     }
 
@@ -82,7 +104,7 @@ public class Scene : GameComponent, IEventListener
     {
         try
         {
-            _entityRemoveQueue.Enqueue(entity);
+            _entityRemoveQueue.Writer.WriteAsync(entity).ConfigureAwait(false).GetAwaiter().GetResult();
             return true;
         }
         catch 

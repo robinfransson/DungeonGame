@@ -95,16 +95,9 @@ public class Player : DestroyableSprite, IEventListener
             _logger.LogDebug("Player was clicked!");
         }
 
-        if (e.Entity is not (DestroyableSprite destroyableSprite and not Player)) return;
-        var weapon = GetWeapon();
-        _logger.LogDebug("Clicked on {entity}, dealing some damage, using {Weapon}", destroyableSprite, weapon?.Name ?? "fists");
-        if (weapon is not null)
-        {
-            weapon.Use();
-            return;
-        };
-        
-        destroyableSprite.TakeDamage(1);
+        if (e.Entity is not null || GetWeapon() is not RangeWeapon rangeWeapon) return;
+        _logger.LogDebug("Dealing some damage, using {Weapon}", rangeWeapon.Name);
+        rangeWeapon.Use();
     }
 
     private void InitializeTextures(IGameManager gameManager)

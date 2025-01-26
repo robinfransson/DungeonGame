@@ -10,6 +10,7 @@ public class NonPlayerCharacter : DestroyableSprite, IEventListener,IOffScreenEv
     private readonly Timer _timer;
     private Func<IGameManager>? _gameManagerGetter = null!;
     private Viewport? Viewport => _gameManagerGetter?.Invoke().Game.GraphicsDevice.Viewport;
+    private bool IsDead => Health <= 0;
     public NonPlayerCharacter(Texture2D texture) : base(texture)
     {
         DrawOrder = 1;

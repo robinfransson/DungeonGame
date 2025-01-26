@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Threading.Channels;
 using DungeonGame.Entities;
 using DungeonGame.Entities.States;
 using DungeonGame.Events;
@@ -19,6 +20,7 @@ namespace DungeonGame;
 public class GameManager : IGameManager
 {
     private readonly IRoutineScheduler _scheduler;
+    private readonly Channel<Entity> _entityRemoveQueue;
     private readonly ContentManager _contentManager; 
     private SpriteBatch? _previousSpriteBatch = null!;
     private const int UpdateInterval = 0;
@@ -49,25 +51,24 @@ public class GameManager : IGameManager
         GameWindow game, 
         ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider,
-        IRoutineScheduler scheduler)
+        IRoutineScheduler scheduler,
+        Channel<Entity> entityRemoveQueue)
     {
         _logger = logger;
         Game = game;
         _loggerFactory = loggerFactory;
         _serviceProvider = serviceProvider;
         _scheduler = scheduler;
+        _entityRemoveQueue = entityRemoveQueue;
         _contentManager = Game.Content;
-        // game.OnUpdate += (_, e) => Update(e.GameTime);
+        game.OnUpdate += (_, e) => _scheduler.Post(_ => Update(e.GameTime), e.GameTime);
         game.OnDraw += (_, e) => Draw(e.GameTime);
         
-        var mods = serviceProvider.GetServices(typeof(IModInitializer));
+        var mods = serviceProvider.GetServices(typeof(IModInitializer)) as IModInitializer[] ?? [];
             
         foreach (var mod in mods)
         {
-            if(mod is IModInitializer initializer)
-            {
-                initializer.Initialize(this);
-            }
+            mod.Initialize(this);
         }
     }
 
@@ -75,13 +76,11 @@ public class GameManager : IGameManager
     {
         if(Game.GraphicsDevice is null)
             return;
-        
-        _scheduler.Post(_ => Update(gameTime), null);
 
         _scheduler.Post(_ =>
         {
             var spriteBatch = new SpriteBatch(Game.GraphicsDevice);
-            spriteBatch.Begin();
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, null);
             DoDraw(spriteBatch);
             spriteBatch.End();
         }, null);
@@ -94,7 +93,7 @@ public class GameManager : IGameManager
         _player ??= CreatePlayer();
         _npc ??= new NonPlayerCharacter(_contentManager.Load<Texture2D>("character_down"));
         _npc.RegisterEvents(this);
-        _currentScene ??= new Scene(Game)
+        _currentScene ??= new Scene(Game, _entityRemoveQueue)
         {
             
             Sprites = {_player, _npc},
@@ -141,11 +140,6 @@ public class GameManager : IGameManager
 
     public void Update(GameTime gameTime)
     {
-        if((gameTime.TotalGameTime - _previousUpdateTime).TotalMilliseconds < UpdateInterval)
-        {
-            return;
-        }
-            
         _previousUpdateTime = gameTime.TotalGameTime;
         var mouseState = Mouse.GetState();
         ReadOnlySpan<ButtonState> mouseButtons = [mouseState.LeftButton, mouseState.RightButton, mouseState.MiddleButton];
@@ -218,7 +212,7 @@ public class GameManager : IGameManager
             
         _logger.LogDebug("Graphics device initialized");
         
-        _currentScene ??= new Scene(Game);
+        _currentScene ??= new Scene(Game, _entityRemoveQueue);
         _currentScene.RegisterEvents(this);
         Game.InitializeGame();
         Game.Run();

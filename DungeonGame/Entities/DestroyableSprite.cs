@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System.Diagnostics;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame.Entities;
@@ -8,25 +9,36 @@ public abstract class DestroyableSprite : CollidableSprite
     private const int Width = 100;
     private Texture2D? _texture;
     private Color[]? _data = null;
+    private SemaphoreSlim _semaphore = new(1, 1);
     
     
     protected Action? OnDispose = null;
     public int Health { get; protected set; }
     public int MaxHealth { get; protected set; }
+
+    protected bool IsDisposed { get; private set; } = false;
     
     
     protected virtual Texture2D? HealthBarTexture
     {
         get
         {
+            if(_semaphore.CurrentCount == 0)
+            {
+                return null;
+            }
             if (Position.ToPoint() == PreviousPosition && _texture is not null)
             {
                 return _texture;
             }
+            
+            _semaphore.Wait();
+            
+            var (scopedHealth, scopedMaxHealth)  = (Health, MaxHealth);
             _texture ??= new Texture2D(Texture.GraphicsDevice, Width, 10);
             _data ??= new Color[Width * 10];
             
-            var currentHpPct = (float)Health / MaxHealth;
+            var currentHpPct = (float)scopedHealth / scopedMaxHealth;
             var currentHp = (int)(currentHpPct * Width);
             for (var i = 0; i < _data.Length; i++)
             {
@@ -35,6 +47,7 @@ public abstract class DestroyableSprite : CollidableSprite
             
 
             _texture.SetData(_data);
+            _semaphore.Release();
             return _texture;
         }
     }
@@ -81,7 +94,7 @@ public abstract class DestroyableSprite : CollidableSprite
         {
             return;
         }
-        
+
         var healthBarPositionWithOffset = Position - new Vector2(-(HealthBarTexture.Width / 4), 30);
         spriteBatch.Draw(HealthBarTexture, healthBarPositionWithOffset, Color.White);
     }
@@ -92,7 +105,14 @@ public abstract class DestroyableSprite : CollidableSprite
 
     protected override void OnDisposeSignal()
     {
-        _texture?.Dispose();
+        if(IsDisposed)
+        {
+            return;
+        }
+        
+        Health = 0;
+        _texture = null;
         OnDispose?.Invoke();
+        IsDisposed = true;
     }
 }
