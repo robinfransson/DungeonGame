@@ -6,9 +6,9 @@ namespace DungeonGame.Extensions;
 
 public static class ButtonStateExtensions
 {
-    public static KeyboardButtonState GetState(this Keys key, KeyboardState state, IEnumerable<Keys> previousKeys)
+    public static KeyboardButtonState GetState(ref readonly Keys value, KeyboardState state, ref readonly Keys[] previousKeys)
     {
-        return previousKeys.Contains(key) && state.IsKeyUp(key) ? KeyboardButtonState.Released : KeyboardButtonState.Pressed;
+        return previousKeys.Contains(value) && state.IsKeyUp(value) ? KeyboardButtonState.Released : KeyboardButtonState.Pressed;
     }
     
     

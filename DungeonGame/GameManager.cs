@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using DungeonGame.Entities;
@@ -150,27 +151,32 @@ public class GameManager : IGameManager
             var entityAtLocation = _currentScene?.GetEntityAtLocation(mouseState.X, mouseState.Y);
             OnMouseClick(mouseState, entityAtLocation);
         }
-            
+
         var state = Keyboard.GetState();
-        var currentKeys = state.GetPressedKeys();
+        var pressedKeys = state.GetPressedKeys();
+        HandleKeyboardChange(state, pressedKeys);
+        _scheduler.Post(_ => CheckCollision(), null);
             
-        if(currentKeys.Length == 0)
+        _previousKeys = pressedKeys;
+        _previousMouseState = mouseState;
+    }
+
+    private void HandleKeyboardChange(KeyboardState keyboardState, ReadOnlySpan<Keys> keys)
+    {
+        if(keys.Length == 0)
         {
             _scheduler.Post(_ => OnKeyboardChange(new KeyboardEventArgs(Keys.None, KeyboardButtonState.None)), null);
             OnKeyboardChange(new KeyboardEventArgs(Keys.None, KeyboardButtonState.None));
             return;
         }
-            
-        foreach (var key in currentKeys)
+
+        foreach (ref readonly var key in keys)
         {
-            var keyState = key.GetState(state, _previousKeys);
-            OnKeyboardChange(new KeyboardEventArgs(key, keyState));
-            _logger.LogDebug("{Key} was {State}", key, keyState);
-        }
-        _scheduler.Post(_ => CheckCollision(), null);
+            var currentKeyState = ButtonStateExtensions.GetState(in key, keyboardState, ref _previousKeys);
             
-        _previousKeys = currentKeys;
-        _previousMouseState = mouseState;
+            var unpinnedKey = key;
+            _scheduler.Post(_ => OnKeyboardChange(new KeyboardEventArgs(unpinnedKey, currentKeyState)), null);
+        }
     }
 
     private void OnMouseClick(MouseState mouseState, Entity? entityAtLocation)
