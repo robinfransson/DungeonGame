@@ -10,8 +10,21 @@ public class DefaultRoutineScheduler : SynchronizationContext, IRoutineScheduler
 
         _continuations.Add(new KeyValuePair<SendOrPostCallback, object>(d, state));
     }
-    
-    
+
+    public void Post(IRoutineScope scope)
+    {
+        _continuations.Add(new KeyValuePair<SendOrPostCallback, object>(state =>
+        {
+            scope.RunScope();
+        }, scope));
+    }
+
+    public IRoutineScope CreateScope()
+    {
+        return new RoutineScope(this);
+    }
+
+
     public void Update()
     {
         var queue = _continuations.ToArray();
