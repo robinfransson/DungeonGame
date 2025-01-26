@@ -16,6 +16,7 @@ namespace DungeonGame
                 .AddGraphicsDeviceAccessor()
                 .AddSingleton<GameWindow>()
                 .AddSingleton<IGameManager, GameManager>()
+                .AddSingleton<IRoutineScheduler, DefaultRoutineScheduler>()
                 .AddLogging(builder =>
                 {
                     builder.AddConsole(options =>

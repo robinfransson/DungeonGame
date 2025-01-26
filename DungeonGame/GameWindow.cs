@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DungeonGame.Entities;
 using DungeonGame.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -58,13 +59,27 @@ namespace DungeonGame
         {
             try
             {
-                _factory(this);
+                SetGraphicsDevice();
                 this.RunOneFrame();
                 return this.GraphicsDevice != null;
             }
             catch (Exception)
             {
                 return false;
+            }
+        }
+
+        private void SetGraphicsDevice()
+        {
+            try
+            {
+                if(this.GraphicsDevice is null) return;
+
+                _factory(this);
+            }
+            catch
+            {
+                _factory(this);
             }
         }
 
@@ -87,26 +102,40 @@ namespace DungeonGame
         {
             ViewportChanged?.Invoke(this, e);
         }
+
+        public void InitializeComponent<T>(EntityWrapper<T> entity) where T : Entity
+        {
+            Components.Add(entity);
+            entity.Initialize(); ;
+        }
     }
 
-    public struct ViewportChangedEventArgs
+    public class EntityWrapper<T> :  EntityWrapper where T : Entity
     {
-        public ViewportChangedEventArgs(ViewportContainer viewport)
+        private readonly IGameManager _gameManager;
+        protected override T Entity { get; }
+        public EntityWrapper(IGameManager gameManager, T entity) : base(gameManager.Game, entity)
         {
-            Viewport = viewport;
+            Entity = entity;
+            _gameManager = gameManager;
         }
 
-        public ViewportContainer Viewport;
-        
-        public struct ViewportContainer
+        public override void Initialize()
         {
-            public ViewportContainer(Viewport viewport)
-            {
-                
-            }
-         
-            public Viewport Viewport { get; }   
+            Entity.Initialize();
         }
+
+        public override void Update(GameTime gameTime)
+        {
+            
+            
+            Entity.Update(_gameManager);
+            base.Update(gameTime);
+        }
+        
+        public override T GetEntity() => Entity;
+        
+        public static implicit operator T(EntityWrapper<T> wrapper) => wrapper.Entity;
     }
 }
 

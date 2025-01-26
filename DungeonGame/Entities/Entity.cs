@@ -2,7 +2,7 @@
 
 namespace DungeonGame.Entities;
 
-public abstract class Entity
+public abstract class Entity : IGameComponent
 {
     protected Point PreviousPosition { get; set; } = Point.Zero;
     protected Vector2 Position { get; set; }
@@ -60,4 +60,7 @@ public abstract class Entity
         { Y: var y } when y > Position.Y => Direction.Down,
         _ => Direction
     };
+
+    public virtual void Update(IGameManager gameManager){}
+    public virtual void Initialize(){}
 }

@@ -1,4 +1,5 @@
 ﻿using DungeonGame.Events;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -6,6 +7,7 @@ namespace DungeonGame.Entities;
 
 public abstract class Sprite : Entity, IDisposable
 {
+
     private readonly Texture2D _emptyTexture;
     
     private Texture2D? _texture2D;

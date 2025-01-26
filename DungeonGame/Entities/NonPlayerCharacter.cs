@@ -9,7 +9,7 @@ public class NonPlayerCharacter : DestroyableSprite, IEventListener,IOffScreenEv
 {
     private readonly Timer _timer;
     private Func<IGameManager>? _gameManagerGetter = null!;
-    private Viewport? _viewport => _gameManagerGetter?.Invoke().Game.GraphicsDevice.Viewport;
+    private Viewport? Viewport => _gameManagerGetter?.Invoke().Game.GraphicsDevice.Viewport;
     public NonPlayerCharacter(Texture2D texture) : base(texture)
     {
         DrawOrder = 1;
@@ -59,10 +59,10 @@ public class NonPlayerCharacter : DestroyableSprite, IEventListener,IOffScreenEv
         var directions = Enum.GetValues<Direction>();
         var direction = directions.ElementAt(Random.Shared.Next(0, directions.Length));
         
-        if(!_viewport.HasValue)
+        if(!Viewport.HasValue)
             return;
         
-        var viewport = _viewport.Value;
+        var viewport = Viewport.Value;
         
         var position = Position;
         

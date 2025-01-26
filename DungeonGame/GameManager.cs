@@ -1,4 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using DungeonGame.Entities;
 using DungeonGame.Entities.States;
 using DungeonGame.Events;
@@ -15,9 +18,10 @@ namespace DungeonGame;
 
 public class GameManager : IGameManager
 {
+    private readonly IRoutineScheduler _scheduler;
     private readonly ContentManager _contentManager; 
     private SpriteBatch? _previousSpriteBatch = null!;
-    private const int UpdateInterval = 16 * 4;
+    private const int UpdateInterval = 0;
     private TimeSpan _previousUpdateTime = TimeSpan.Zero;
     private Keys[] _previousKeys = [];
     private readonly ILogger<GameManager> _logger;
@@ -37,18 +41,21 @@ public class GameManager : IGameManager
     private Scene? _currentScene;
     private MouseState _previousMouseState;
     private ConcurrentDictionary<object, object> _entityProvider = new();
+    private ConcurrentDictionary<object, object> _assetProvider = new();
 
 
     public GameManager(
         ILogger<GameManager> logger, 
         GameWindow game, 
         ILoggerFactory loggerFactory,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IRoutineScheduler scheduler)
     {
         _logger = logger;
         Game = game;
         _loggerFactory = loggerFactory;
         _serviceProvider = serviceProvider;
+        _scheduler = scheduler;
         _contentManager = Game.Content;
         // game.OnUpdate += (_, e) => Update(e.GameTime);
         game.OnDraw += (_, e) => Draw(e.GameTime);
@@ -69,11 +76,17 @@ public class GameManager : IGameManager
         if(Game.GraphicsDevice is null)
             return;
         
-        Update(gameTime);
-        var spriteBatch = new SpriteBatch(Game.GraphicsDevice);
-        spriteBatch.Begin();
-        DoDraw(spriteBatch);
-        spriteBatch.End();
+        _scheduler.Post(_ => Update(gameTime), null);
+
+        _scheduler.Post(_ =>
+        {
+            var spriteBatch = new SpriteBatch(Game.GraphicsDevice);
+            spriteBatch.Begin();
+            DoDraw(spriteBatch);
+            spriteBatch.End();
+        }, null);
+        
+        _scheduler.Update();
     }
 
     private void DoDraw(SpriteBatch spriteBatch)
@@ -96,7 +109,6 @@ public class GameManager : IGameManager
         {
             entity.OnOffScreen();
         }
-        
         _currentScene.Draw(spriteBatch);
     }
 
@@ -142,7 +154,7 @@ public class GameManager : IGameManager
         if(!mouseButtons.SequenceEqual(previousMouseButtons))
         {
             var entityAtLocation = _currentScene?.GetEntityAtLocation(mouseState.X, mouseState.Y);
-            MouseClicked?.Invoke(this, new MouseEventArgs(mouseState.X, mouseState.Y, mouseState, mouseState.GetMouseButtonState(), entityAtLocation));
+            OnMouseClick(mouseState, entityAtLocation);
         }
             
         var state = Keyboard.GetState();
@@ -150,6 +162,7 @@ public class GameManager : IGameManager
             
         if(currentKeys.Length == 0)
         {
+            _scheduler.Post(_ => OnKeyboardChange(new KeyboardEventArgs(Keys.None, KeyboardButtonState.None)), null);
             OnKeyboardChange(new KeyboardEventArgs(Keys.None, KeyboardButtonState.None));
             return;
         }
@@ -160,11 +173,15 @@ public class GameManager : IGameManager
             OnKeyboardChange(new KeyboardEventArgs(key, keyState));
             _logger.LogDebug("{Key} was {State}", key, keyState);
         }
-        
-        CheckCollision();
+        _scheduler.Post(_ => CheckCollision(), null);
             
         _previousKeys = currentKeys;
         _previousMouseState = mouseState;
+    }
+
+    private void OnMouseClick(MouseState mouseState, Entity? entityAtLocation)
+    {
+        MouseClicked?.Invoke(this, new MouseEventArgs(mouseState.X, mouseState.Y, mouseState, mouseState.GetMouseButtonState(), entityAtLocation));
     }
 
     private void CheckCollision()
@@ -210,6 +227,42 @@ public class GameManager : IGameManager
     public T GetService<T>() where T : notnull
     {
         return _serviceProvider.GetRequiredService<T>();
+    }
+    
+    public bool TryGetKeyedAsset<T>(object key, out T? asset)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        
+        if(_assetProvider.TryGetValue(key, out var serviceObj))
+        {
+            asset = (T) serviceObj;
+            return true;
+        }
+        
+        asset = default;
+        return false;
+    }
+    
+    public TValue AddKeyedAsset<TArg, TKey, TValue>(TKey key, Func<TKey, TArg, TValue> addValueFactory,  Func<TKey, TValue, TArg, TValue> updateValueFactory, TArg factoryArgument) 
+        where TKey : notnull 
+        where TArg : notnull
+        where TValue : notnull
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(addValueFactory);
+        ArgumentNullException.ThrowIfNull(updateValueFactory);
+
+        return (TValue)_assetProvider.AddOrUpdate(key, (Func<object, TArg, object>) AddValueAsObjArgValue, (Func<object, object, TArg, object>)UpdateValueAsObjectObjectTArgObject, factoryArgument);
+
+        object AddValueAsObjArgValue(object k, TArg v)
+        {
+            return addValueFactory((TKey) k, v);
+        }
+
+        object UpdateValueAsObjectObjectTArgObject(object k, object v, TArg a)
+        {
+            return updateValueFactory((TKey) k, (TValue) v, a);
+        }
     }
 
     public T? LoadContent<T>(string name)
@@ -264,7 +317,11 @@ public class GameManager : IGameManager
             listener.RegisterEvents(this);
         }
         
-        _currentScene?.Sprites.Add(entity);
+        
+        var wrapper = new EntityWrapper<T>(this, entity);
+        Game.InitializeComponent(wrapper);
+        
+        _currentScene?.Sprites.Add(wrapper);
         return entity;
     }
 }
