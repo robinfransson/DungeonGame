@@ -32,6 +32,7 @@ public class GameManager : IGameManager
     private readonly IServiceProvider _serviceProvider;
     private Player? _player;
     private NonPlayerCharacter? _npc;
+    private readonly CameraWrapper _camera;
     public event EventHandler<KeyboardEventArgs>? KeyPressed;
     public event EventHandler<LogMessageEventArgs>? LogMessage;
     public event EventHandler<MouseEventArgs>? MouseClicked;
@@ -53,13 +54,15 @@ public class GameManager : IGameManager
         ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider,
         IRoutineScheduler scheduler,
-        Channel<Entity> entityRemoveQueue)
+        Channel<Entity> entityRemoveQueue,
+        CameraWrapper camera)
     {
         _logger = logger;
         Game = game;
         _loggerFactory = loggerFactory;
         _serviceProvider = serviceProvider;
         _scheduler = scheduler;
+        _camera = camera;
         _entityRemoveQueue = entityRemoveQueue;
         _contentManager = Game.Content;
         game.OnUpdate += (_, e) => _scheduler.Post(_ => Update(e.GameTime), e.GameTime);
@@ -71,6 +74,8 @@ public class GameManager : IGameManager
         {
             mod.Initialize(this);
         }
+        
+        
     }
 
     private void Draw(GameTime gameTime)
@@ -81,10 +86,10 @@ public class GameManager : IGameManager
         _scheduler.Post(_ =>
         {
             var spriteBatch = new SpriteBatch(Game.GraphicsDevice);
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, null);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, _camera.GetViewMatrix());
             DoDraw(spriteBatch);
             spriteBatch.End();
-        }, null);
+        }, _camera);
         
         _scheduler.Update();
     }
@@ -94,7 +99,7 @@ public class GameManager : IGameManager
         _player ??= CreatePlayer();
         _npc ??= new NonPlayerCharacter(_contentManager.Load<Texture2D>("character_down"));
         _npc.RegisterEvents(this);
-        _currentScene ??= new Scene(Game, _entityRemoveQueue)
+        _currentScene ??= new Scene(Game, _entityRemoveQueue, _camera)
         {
             
             Sprites = {_player, _npc},
@@ -118,7 +123,7 @@ public class GameManager : IGameManager
         var pixel = LoadPlayerTexture();
         var data = Enumerable.Repeat(Color.White, pixel.Height * pixel.Width).ToArray();
         pixel.SetData(data);
-        var player = new Player(pixel, _loggerFactory.CreateLogger<Player>());
+        var player = new Player(pixel, _loggerFactory.CreateLogger<Player>(), _camera);
         player.RegisterEvents(this);
         return player;
     }
@@ -217,7 +222,7 @@ public class GameManager : IGameManager
             
         _logger.LogDebug("Graphics device initialized");
         
-        _currentScene ??= new Scene(Game, _entityRemoveQueue);
+        _currentScene ??= new Scene(Game, _entityRemoveQueue, _camera);
         _currentScene.RegisterEvents(this);
         Game.InitializeGame();
         Game.Run();

@@ -5,21 +5,24 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 
 namespace DungeonGame.Entities;
 
 public class Player : DestroyableSprite, IEventListener
 {
     private readonly ILogger<Player> _logger;
+    private readonly CameraWrapper _camera;
     private Dictionary<Direction, Dictionary<MovementState, Func<Texture2D>>> _textures = new();
     private MovementState _movementState = MovementState.Idle;
 
     private List<EquippableItem> _inventory = new();
     
 
-    public Player(Texture2D texture, ILogger<Player> logger) : base(texture)
+    public Player(Texture2D texture, ILogger<Player> logger, CameraWrapper camera) : base(texture)
     {
         _logger = logger;
+        _camera = camera;
         Position = Vector2.Zero;
         Direction = Direction.Down;
         Color = Color.White;
@@ -126,6 +129,7 @@ public class Player : DestroyableSprite, IEventListener
         
         _movementState = MovementState.Walking;
         var previousDirection = Direction;
+        
         switch (e.Key)
         {
             case Keys.W:
@@ -155,6 +159,9 @@ public class Player : DestroyableSprite, IEventListener
                 _movementState = MovementState.Idle;
                 return;
         }
+        
+        _camera.LookAt(Position);
+        _camera.SetZoom(1.5f);
         
         if(previousDirection != Direction)
         {

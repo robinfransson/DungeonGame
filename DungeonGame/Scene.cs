@@ -4,8 +4,10 @@ using System.Text;
 using System.Threading.Channels;
 using DungeonGame.Entities;
 using DungeonGame.Events;
+using DungeonGame.Extensions;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended;
 using MonoGame.Extended.Tiled;
 
 namespace DungeonGame;
@@ -13,15 +15,17 @@ namespace DungeonGame;
 public class Scene : GameComponent, IEventListener
 {
     private readonly Channel<Entity> _entityRemoveQueue;
+    private readonly CameraWrapper _cameraWrapper;
     private readonly GameObjectWrapper Inspector = null!;
     public Texture2D Background { get; protected set; }
     public List<Entity> Sprites { get; } = [];
 
     public List<GameObject> GameObjects { get; set; } = [];
 
-    public Scene(Game game, Channel<Entity> entityRemoveQueue) : base(game)
+    public Scene(Game game, Channel<Entity> entityRemoveQueue, CameraWrapper cameraWrapper) : base(game)
     {
         _entityRemoveQueue = entityRemoveQueue;
+        _cameraWrapper = cameraWrapper;
         Background = CreateGrassyBackground();
         Inspector = SpawnInspector();
     }
@@ -80,6 +84,8 @@ public class Scene : GameComponent, IEventListener
             gameObject.Draw(spriteBatch);
         }
         Inspector.Draw(spriteBatch);
+        
+        
     }
     
     private IEnumerable<Entity> GetEntitiesAsync()

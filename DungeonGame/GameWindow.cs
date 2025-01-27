@@ -73,7 +73,7 @@ namespace DungeonGame
         {
             try
             {
-                if(this.GraphicsDevice is null) return;
+                if(this.GraphicsDevice is not null) return;
 
                 _factory(this);
             }
