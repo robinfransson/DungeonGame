@@ -1,13 +1,10 @@
-﻿using System;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using DungeonGame.Entities;
+using DungeonGame.Events;
 using DungeonGame.Extensions;
-//dep inject
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace DungeonGame
 {
@@ -32,6 +29,7 @@ namespace DungeonGame
                     SingleWriter = false
                 }))
                 .AddSingleton<IGameManager, GameManager>()
+                .AddSingleton<EventHandlerProvider>()
                 .AddSingleton<IRoutineScheduler, DefaultRoutineScheduler>()
                 .AddLogging(builder =>
                 {
@@ -45,29 +43,6 @@ namespace DungeonGame
             var gameManager = serviceProvider.GetRequiredService<IGameManager>();
             await gameManager.RunAsync();
         }
-    }
-
-    public interface IGraphicsDeviceAccessor
-    {
-        ref GraphicsDevice? GraphicsDevice { get; }
-        
-    }
-
-    internal class DefaultGraphicsDeviceAccessor : IGraphicsDeviceAccessor
-    {
-        private GraphicsDevice? _graphicsDevice;
-
-        public ref GraphicsDevice? GraphicsDevice
-        {
-            get
-            {
-                _graphicsDevice ??= LazyGraphicsDevice.Value;
-                return ref _graphicsDevice;
-            }
-        }
-
-
-        public Lazy<GraphicsDevice> LazyGraphicsDevice { get; internal set; }
     }
 }
 
