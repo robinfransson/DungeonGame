@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using DungeonGame.Events;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -39,7 +40,7 @@ public static class ServiceExtensions
         {
             var game = sp.GetRequiredService<GameWindow>();
             var graphicsDevice = sp.GetRequiredService<IGraphicsDeviceAccessor>().GraphicsDevice;
-            var boxingAdapter = new BoxingViewportAdapter(game.Window, graphicsDevice, 800, 480, 800, 480);
+            var boxingAdapter = new BoxingViewportAdapter(game.Window, graphicsDevice, graphicsDevice.PresentationParameters.BackBufferWidth, graphicsDevice.PresentationParameters.BackBufferHeight);
             var camera = new OrthographicCamera(boxingAdapter);
             return new CameraWrapper(camera);
         });
@@ -53,50 +54,34 @@ public static class ServiceExtensions
         modLoader.LoadMods(services);
         return services;
     }
-}
-
-public class CameraWrapper
-{
-    public static CameraWrapper Empty { get; } = new (null!);
-    private readonly OrthographicCamera _camera;
-
-    public CameraWrapper(OrthographicCamera camera)
-    {
-        _camera = camera;
-    }
-
-    public Matrix GetViewMatrix()
-    {
-        return _camera.GetViewMatrix();
-    }
-
-    public void Move(Vector2 direction)
-    {
-        _camera.Move(direction);
-    }
-
-    public void ZoomIn(float delta)
-    {
-        _camera.ZoomIn(delta);
-    }
     
-    public void ZoomOut(float delta)
-    {
-        _camera.ZoomOut(delta);
-    }
     
-    public void SetZoom(float delta)
+    public static IServiceCollection AddEventHandlers(this IServiceCollection services)
     {
-        _camera.Zoom = delta;
+        return services.AddSingleton<EventHandlerProvider>()
+            .AddEventHandler<DeathEventHandler, OnDeathEvent>()
+            .Configure<GameEventOptions>(options =>
+            {
+                options.RegisterEventHandler<DeathEventHandler, OnDeathEvent>();
+                options.RegisterEventFactory<OnDeathEvent>(manager => new OnDeathEvent(manager.GetPlayer()!));
+                options.RegisterRaisingFactory<OnDeathEvent>(manager => manager.GetPlayer()?.Health <= 0);
+            });
+
     }
 
-    public void Rotate(float delta)
+    public static IServiceCollection AddEventHandler<TEventHandler, T>(this IServiceCollection services)
+        where TEventHandler : class, IGameEventHandler<T>
+        where T : GameEvent
     {
-        _camera.Rotate(delta);
+        return services.AddEventHandlerCore<TEventHandler>()
+            .AddSingleton<IGameEventHandler<T>, TEventHandler>();
     }
 
-    public void LookAt(Vector2 position)
+
+    public static IServiceCollection AddEventHandlerCore<T>(this IServiceCollection services) where T : class, IGameEventHandler
     {
-        _camera.LookAt(position);
+        services.AddOptions<GameEventOptions>();
+        return services.AddSingleton<T>()
+            .AddSingleton<IGameEventHandler, T>();
     }
 }

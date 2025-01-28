@@ -39,6 +39,7 @@ namespace DungeonGame
                     });
                 })
                 .AddModSupport()
+                .AddEventHandlers()
                 .BuildServiceProvider();
             var gameManager = serviceProvider.GetRequiredService<IGameManager>();
             await gameManager.RunAsync();

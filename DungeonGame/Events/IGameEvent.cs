@@ -5,5 +5,5 @@ namespace DungeonGame.Events;
 // Marker interface for events
 public interface IGameEvent
 {
-    public string Name { get; }
+    string Name { get; }
 }

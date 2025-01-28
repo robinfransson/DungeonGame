@@ -27,6 +27,7 @@ public class Player : DestroyableSprite, IEventListener
         Direction = Direction.Down;
         Color = Color.White;
         Scale = 0.4f;
+        Health = 0;
     }
 
     protected override Texture2D Texture => _textures[Direction][_movementState]();

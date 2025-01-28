@@ -11,6 +11,7 @@ using DungeonGame.Extensions;
 using DungeonGame.Mods;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -20,9 +21,10 @@ namespace DungeonGame;
 
 public class GameManager : IGameManager
 {
+    private readonly EventRaiser _eventRaiser;
     private readonly IRoutineScheduler _scheduler;
     private readonly Channel<Entity> _entityRemoveQueue;
-    private readonly ContentManager _contentManager; 
+    private readonly ContentManager _contentManager;
     private SpriteBatch? _previousSpriteBatch = null!;
     private const int UpdateInterval = 0;
     private TimeSpan _previousUpdateTime = TimeSpan.Zero;
@@ -33,9 +35,11 @@ public class GameManager : IGameManager
     private Player? _player;
     private NonPlayerCharacter? _npc;
     private readonly CameraWrapper _camera;
+    private readonly IModInitializer[] _mods;
     public event EventHandler<KeyboardEventArgs>? KeyPressed;
     public event EventHandler<LogMessageEventArgs>? LogMessage;
     public event EventHandler<MouseEventArgs>? MouseClicked;
+
     public event EventHandler<ViewportChangedEventArgs>? ViewportChanged
     {
         add => Game.ViewportChanged += value;
@@ -46,36 +50,39 @@ public class GameManager : IGameManager
     private MouseState _previousMouseState;
     private ConcurrentDictionary<object, object> _entityProvider = new();
     private ConcurrentDictionary<object, object> _assetProvider = new();
+    private readonly EventHandlerProvider _eventHandlerProvider;
 
 
     public GameManager(
-        ILogger<GameManager> logger, 
-        GameWindow game, 
+        ILogger<GameManager> logger,
+        GameWindow game,
         ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider,
         IRoutineScheduler scheduler,
         Channel<Entity> entityRemoveQueue,
-        CameraWrapper camera)
-    {
+        CameraWrapper camera,
+        IModInitializer[] mods,
+        EventHandlerProvider eventHandlerProvider,
+        IOptions<GameEventOptions> gameEventOptions)
+        {
         _logger = logger;
         Game = game;
         _loggerFactory = loggerFactory;
         _serviceProvider = serviceProvider;
         _scheduler = scheduler;
         _camera = camera;
+        _mods = mods;
+        _eventHandlerProvider = eventHandlerProvider;
         _entityRemoveQueue = entityRemoveQueue;
         _contentManager = Game.Content;
-        game.OnUpdate += (_, e) => _scheduler.Post(_ => Update(e.GameTime), e.GameTime);
-        game.OnDraw += (_, e) => Draw(e.GameTime);
-        
-        var mods = serviceProvider.GetServices(typeof(IModInitializer)) as IModInitializer[] ?? [];
-            
-        foreach (var mod in mods)
+        _eventRaiser = new EventRaiser(Game)
         {
-            mod.Initialize(this);
-        }
+            GameManager = this,
+            GameEventOptions = gameEventOptions.Value,
+            EventHandlerProvider = eventHandlerProvider
+        };
         
-        
+        Game.Components.Add(_eventRaiser);
     }
 
     private void Draw(GameTime gameTime)
@@ -222,6 +229,16 @@ public class GameManager : IGameManager
             
         _logger.LogDebug("Graphics device initialized");
         
+        Game.OnUpdate += (_, e) => _scheduler.Post(_ => Update(e.GameTime), e.GameTime);
+        Game.OnDraw += (_, e) => Draw(e.GameTime);
+        
+        var mods = _serviceProvider.GetServices(typeof(IModInitializer)) as IModInitializer[] ?? [];
+            
+        foreach (var mod in mods)
+        {
+            mod.Initialize(this);
+        }
+
         _currentScene ??= new Scene(Game, _entityRemoveQueue, _camera);
         _currentScene.RegisterEvents(this);
         Game.InitializeGame();

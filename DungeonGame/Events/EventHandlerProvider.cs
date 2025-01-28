@@ -2,9 +2,9 @@
 
 public class EventHandlerProvider
 {
-    private readonly IGameEventHandler[] _handlers;
+    private readonly IEnumerable<IGameEventHandler> _handlers;
 
-    public EventHandlerProvider(IGameEventHandler[] eventHandlers)
+    public EventHandlerProvider(IEnumerable<IGameEventHandler> eventHandlers)
     {
         _handlers = eventHandlers;
     }

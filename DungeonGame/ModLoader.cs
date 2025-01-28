@@ -9,6 +9,7 @@ namespace DungeonGame;
 
 public class ModLoader
 {
+    private readonly byte[] _bom = [0xEF, 0xBB, 0xBF];
     public ModLoader(ILogger<ModLoader> logger)
     {
         logger.LogDebug("Loading mods");
@@ -16,7 +17,7 @@ public class ModLoader
         
     public void LoadMods(IServiceCollection serviceCollection)
     {
-        return;
+        // return;
         const string modsPath = "mods";
         // Load mods from /mods folder and initialize them
             
@@ -27,7 +28,7 @@ public class ModLoader
         foreach (var directory in directories)
         {
             ReadOnlySpan<byte> modSettings = File.ReadAllBytes(Path.Combine(directory, "mod.json"));
-            ReadOnlySpan<byte> utf8Bom = [0xEF, 0xBB, 0xBF];
+            ReadOnlySpan<byte> utf8Bom = _bom;
 
             if (modSettings.StartsWith(utf8Bom))
             {
@@ -53,6 +54,12 @@ public class ModLoader
         }
             
         serviceCollection.TryAddEnumerable(mods.Select(mod => ServiceDescriptor.Singleton(typeof(IModInitializer), mod)));
+        serviceCollection.TryAddEnumerable(mods.Select(mod => ServiceDescriptor.Singleton(typeof(IModInitializer), mod)));
+        serviceCollection.AddTransient<IModInitializer[]>(x =>
+        {
+             var smods = x.GetServices(typeof(IModInitializer)).ToArray() as IModInitializer[] ?? [];
+             return smods;
+        });
     }
 
 
