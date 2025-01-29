@@ -1,4 +1,5 @@
-﻿using DungeonGame.Events;
+﻿using DungeonGame.Entities;
+using DungeonGame.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -41,7 +42,13 @@ public static class ServiceExtensions
             var game = sp.GetRequiredService<GameWindow>();
             var graphicsDevice = sp.GetRequiredService<IGraphicsDeviceAccessor>().GraphicsDevice;
             var boxingAdapter = new BoxingViewportAdapter(game.Window, graphicsDevice, graphicsDevice.PresentationParameters.BackBufferWidth, graphicsDevice.PresentationParameters.BackBufferHeight);
-            var camera = new OrthographicCamera(boxingAdapter);
+            var camera = new OrthographicCamera(boxingAdapter)
+            {
+                MinimumZoom = //make it so that the camera can't zoom out too far
+                    0.1f,
+                MaximumZoom = //make it so that the camera can't zoom in too far
+                    2f
+            };
             return new CameraWrapper(camera);
         });
     }
@@ -60,11 +67,27 @@ public static class ServiceExtensions
     {
         return services.AddSingleton<EventHandlerProvider>()
             .AddEventHandler<DeathEventHandler, OnDeathEvent>()
+            .AddEventHandler<MouseScrollEventHandler, OnMouseScrollEvent>()
             .Configure<GameEventOptions>(options =>
             {
                 options.RegisterEventHandler<DeathEventHandler, OnDeathEvent>();
                 options.RegisterEventFactory<OnDeathEvent>(manager => new OnDeathEvent(manager.GetPlayer()!));
                 options.RegisterRaisingFactory<OnDeathEvent>(manager => manager.GetPlayer()?.Health <= 0);
+                options.RegisterEventHandler<MouseScrollEventHandler, OnMouseScrollEvent>();
+                options.RegisterEventFactory<OnMouseScrollEvent>(manager =>
+                {
+                    var mouseState = manager.GetMouseState(true);
+                    var previousMouseState = manager.GetPreviousMouseState();
+                    var direction = mouseState.DeltaScrollWheelValue > 0 ? Direction.Up : Direction.Down;
+                    return new OnMouseScrollEvent(manager.GetPlayer()!, mouseState.DeltaScrollWheelValue, direction);
+                });
+                options.RegisterRaisingFactory<OnMouseScrollEvent>(manager =>
+                {
+                    var mouseState = manager.GetMouseState();
+                    var previousMouseState = manager.GetPreviousMouseState();
+                    var hasScrolledRecently = mouseState.ScrollWheelValue != previousMouseState.ScrollWheelValue;
+                    return hasScrolledRecently;
+                });
             });
 
     }

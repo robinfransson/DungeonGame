@@ -16,11 +16,16 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.Input;
 
 namespace DungeonGame;
 
 public class GameManager : IGameManager
 {
+    private Scene? _currentScene;
+    private MouseState _previousMouseState;
+    private MouseStateExtended _previousExtendedMouseState;
+    private MouseStateExtended _currentExtendedMouseState;
     private readonly EventRaiser _eventRaiser;
     private readonly IRoutineScheduler _scheduler;
     private readonly Channel<Entity> _entityRemoveQueue;
@@ -46,8 +51,6 @@ public class GameManager : IGameManager
         remove => Game.ViewportChanged -= value;
     }
 
-    private Scene? _currentScene;
-    private MouseState _previousMouseState;
     private ConcurrentDictionary<object, object> _entityProvider = new();
     private ConcurrentDictionary<object, object> _assetProvider = new();
     private readonly EventHandlerProvider _eventHandlerProvider;
@@ -295,6 +298,24 @@ public class GameManager : IGameManager
     {
         _player ??= CreatePlayer();
         return ref _player;
+    }
+
+    public MouseStateExtended GetMouseState(bool skipUpdate = false)
+    {
+        if(skipUpdate)
+        {
+            return _currentExtendedMouseState;
+        }
+        var current = Mouse.GetState();
+        var previous = _previousMouseState;
+        _previousExtendedMouseState = _currentExtendedMouseState;
+        _currentExtendedMouseState = new MouseStateExtended(current, previous);
+        return _currentExtendedMouseState;
+    }
+    
+    public MouseStateExtended GetPreviousMouseState()
+    {
+        return _previousExtendedMouseState;
     }
 
     public void RemoveEntity(Entity entity)

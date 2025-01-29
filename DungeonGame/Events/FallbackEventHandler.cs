@@ -4,19 +4,18 @@ namespace DungeonGame.Events;
 
 public class FallbackEventHandler : GameEventHandler
 {
-    private readonly ILogger<FallbackEventHandler> _logger;
-
-    public FallbackEventHandler(ILogger<FallbackEventHandler> logger)
+    public FallbackEventHandler(ILogger<GameEvent> logger) : base(logger)
     {
-        _logger = logger;
     }
     
     protected override Task HandleEvent(GameEvent gameEvent)
     {
-        _logger.LogDebug("No event handler found for event {Event}", gameEvent.Name);
+        Logger.LogDebug("No event handler found for event {Event}", gameEvent.Name);
         
         return Task.CompletedTask;
     }
+
+    public override TimeSpan Delay => TimeSpan.Zero;
 
     public override Task<bool> Predicate(GameEvent gameEvent)
     {

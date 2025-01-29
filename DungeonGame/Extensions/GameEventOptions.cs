@@ -1,4 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Collections;
+using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using DungeonGame.Events;
 
 namespace DungeonGame.Extensions;
@@ -61,5 +63,59 @@ public class GameEventOptions
         }
         
         return (false, null);
+    }
+
+    public EventQueue GetEventQueue(IGameManager gameManager)
+    {
+        var queue = new EventQueue();
+        foreach(var (type, factory) in RaisingFactory)
+        {
+            if(factory(gameManager))
+            {
+                queue.Enqueue(CreateEvent(gameManager, type));
+            }
+        }
+
+        return queue;
+    }
+}
+
+
+//create an ienumerable that can only contain one type of each gameEvent in the queue
+public class EventQueue : IEnumerable<IGameEvent>
+{
+    private readonly ConcurrentQueue<IGameEvent> _queue = new();
+    private readonly ConcurrentDictionary<Type, IGameEvent> _eventLookup = new();
+
+    public void Enqueue(IGameEvent gameEvent)
+    {
+        if (_eventLookup.ContainsKey(gameEvent.GetType()))
+        {
+            return;
+        }
+
+        _queue.Enqueue(gameEvent);
+        _eventLookup[gameEvent.GetType()] = gameEvent;
+    }
+
+    public bool TryDequeue([NotNullWhen(true)] out IGameEvent? gameEvent)
+    {
+        if(_queue.TryDequeue(out gameEvent))
+        {
+            _eventLookup.Remove(gameEvent.GetType(), out _);
+            return true;
+        }
+
+        return false;
+    }
+
+    public IEnumerator<IGameEvent> GetEnumerator()
+    {
+        return _queue.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
     }
 }

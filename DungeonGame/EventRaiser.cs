@@ -19,19 +19,23 @@ internal class EventRaiser : GameComponent
     
     public override void Update(GameTime gameTime)
     {
-        if((gameTime.TotalGameTime - _previousUpdateTime).TotalMilliseconds < IntervalInMilliseconds)
+        var eventQueue = GameEventOptions.GetEventQueue(GameManager);
+        
+        while(eventQueue.TryDequeue(out var gameEvent))
         {
-            return;
+            SetTimeOnEvent(gameEvent, gameTime, _previousUpdateTime);
+            ThreadPool.QueueUserWorkItem(_ => EventHandlerProvider.TriggerEvent(gameEvent), null);
         }
         
-        
-        if(GameEventOptions.ShouldRaiseEvent(GameManager) is (true, Type eventType))
-        {
-            var evt = GameEventOptions.CreateEvent(GameManager, eventType);
-            EventHandlerProvider.TriggerEvent(evt);
-        }
-        
-        base.Update(gameTime);
         _previousUpdateTime = gameTime.TotalGameTime;
+    }
+    
+    
+
+
+    private void SetTimeOnEvent(IGameEvent gameEvent, GameTime gameTime, TimeSpan previousUpdateTime)
+    {
+        gameEvent.Time = gameTime;
+        gameEvent.PreviousUpdateTime = previousUpdateTime;
     }
 }

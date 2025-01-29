@@ -2,6 +2,7 @@
 
 public interface IGameEventHandler
 {
+    TimeSpan Delay { get; }
     Task Handle(IGameEvent gameEvent);
     Task<bool> Predicate(IGameEvent gameEvent);
 }

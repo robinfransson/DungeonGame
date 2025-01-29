@@ -3,6 +3,8 @@ using DungeonGame.Entities;
 using DungeonGame.Events;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.Input;
 
 namespace DungeonGame;
 
@@ -19,6 +21,8 @@ public interface IGameManager
     T GetService<T>() where T : notnull;
     T? LoadContent<T>(string name);
     ref Player? GetPlayer();
+    MouseStateExtended GetMouseState(bool skipUpdate = false);
+    MouseStateExtended GetPreviousMouseState();
     void RemoveEntity(Entity entity);
     T CreateEntity<T>(object key) where T : Entity;
     T CreateEntity<T>(object key, Func<IGameManager, T> acquire) where T : Entity;

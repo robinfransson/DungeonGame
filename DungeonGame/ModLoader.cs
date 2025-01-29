@@ -10,9 +10,11 @@ namespace DungeonGame;
 public class ModLoader
 {
     private readonly byte[] _bom = [0xEF, 0xBB, 0xBF];
+    private readonly ILogger<ModLoader> _logger;
+
     public ModLoader(ILogger<ModLoader> logger)
     {
-        logger.LogDebug("Loading mods");
+        _logger = logger;
     }
         
     public void LoadMods(IServiceCollection serviceCollection)
@@ -27,7 +29,15 @@ public class ModLoader
 
         foreach (var directory in directories)
         {
-            ReadOnlySpan<byte> modSettings = File.ReadAllBytes(Path.Combine(directory, "mod.json"));
+            var modJson = Path.Combine(directory, "mod.json");
+            
+            if(!File.Exists(modJson))
+            {
+                _logger.LogWarning($"Could not find mod.json in {directory}");
+                continue;
+            }
+            
+            ReadOnlySpan<byte> modSettings = File.ReadAllBytes(modJson);
             ReadOnlySpan<byte> utf8Bom = _bom;
 
             if (modSettings.StartsWith(utf8Bom))
